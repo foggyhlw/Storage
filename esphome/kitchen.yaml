@@ -1,0 +1,112 @@
+esphome:
+  name: kitchen
+  platform: ESP8266
+  board: nodemcuv2
+
+globals:
+  - id: light1_on
+    type: int
+    restore_value: no
+    initial_value: '0'
+    
+wifi:
+  ssid: "yourssid"
+  password: "yourpasswd"
+  # manual_ip:
+  #   static_ip: 192.168.0.16
+  #   gateway: 192.168.0.1
+  #   subnet: 255.255.255.0
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Kitchen Fallback Hotspot"
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: "your_api_passwd"
+  reboot_timeout: 0s
+ota:
+  password: "your_ota_passwd"
+
+i2c:
+  sda: D1
+  scl: D2
+  scan: True
+
+light:
+  - platform: monochromatic
+    output: pwm_output
+    name: "kitchen_light_strip"
+    #default_transition_length: 2s
+    id: kitchen_light_strip
+    
+sensor:
+  - platform: bh1750
+    name: "Kitchen_Illuminance"
+    id: kitchen_illuminance
+    address: 0x23
+    update_interval: 5s
+    # filters:
+    #   - lambda: return int(x);
+    # on_value:
+    #   then:
+    #     - mqtt.publish:
+    #         topic: "/foggy/kitchen/lux"
+    #         payload: !lambda "return ::to_string(x);"
+
+binary_sensor:
+  - platform: gpio
+    pin: D7
+    name: "kitchen_motion"
+    device_class: motion
+    filters:
+      - delayed_on: 100ms
+    on_press:
+      then:
+        - if:
+            condition:
+              lambda: |-
+                return id(kitchen_illuminance).state < 2;
+            then:
+              if:
+                condition:
+                  lambda: |-
+                    return id(light1_on) == 0;
+                then:
+                  - light.turn_on:
+                      id: kitchen_light_strip
+                      brightness: 100%
+                      transition_length: 2s
+                  - lambda: 'id(light1_on) = 1;'
+                  - delay: 120s
+                  - light.turn_off:
+                      id: kitchen_light_strip
+                      transition_length: 2s
+                  - lambda: 'id(light1_on) = 0;'
+  - platform: gpio
+    pin: D5
+    name: "kitchen_MQ5"
+    device_class: gas
+    filters:
+      - invert:
+      - delayed_on: 100ms
+    # on_press:
+    #   then:
+    #     - mqtt.publish:
+    #         topic: "/foggy/kitchen/gas"
+    #         payload: "1"
+    # on_release:
+    #   then:
+    #     - mqtt.publish:
+    #         topic: "/foggy/kitchen/gas"
+    #         payload: "0"
+
+output:
+  - platform: esp8266_pwm
+    pin: D8
+    #frequency: 1000 Hz
+    id: pwm_output
