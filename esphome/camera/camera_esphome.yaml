@@ -1,0 +1,110 @@
+esphome:
+  name: camera
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  services:
+    - service: control_servo_left_right
+      variables:
+        level: float
+      then:
+        - servo.write:
+            id: camera_LR
+            level: !lambda 'return level / 100.0;'
+    - service: control_servo_up_down
+      variables:
+        level: float
+      then:
+        - servo.write:
+            id: camera_UD
+            level: !lambda 'return level / 100.0;'
+  password: "your_passwd"
+            
+ota:
+  password: "your_passwd"
+
+wifi:
+  ssid: "your_ssid"
+  password: "your_passwd"
+  manual_ip:
+    static_ip: 192.168.0.109
+    gateway: 192.168.0.1
+    subnet: 255.255.255.0
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Camera Fallback Hotspot"
+    password: "your_passwd"
+
+captive_portal:
+    
+esp32_camera:
+  name: my_camera
+  external_clock:
+    pin: GPIO0
+    frequency: 20MHz
+  i2c_pins:
+    sda: GPIO26
+    scl: GPIO27
+  data_pins: [GPIO5, GPIO18, GPIO19, GPIO21, GPIO36, GPIO39, GPIO34, GPIO35]
+  vsync_pin: GPIO25
+  href_pin: GPIO23
+  pixel_clock_pin: GPIO22
+  power_down_pin: GPIO32
+  # resolution: 800x600
+
+# number:
+#   - platform: template
+#     name: Servo Left Right Control
+#     min_value: -100
+#     max_value: 100
+#     step: 1
+#     set_action:
+#       then:
+#         - servo.write:
+#             id: camera_LR
+#             level: !lambda 'return x / 100.0;'
+#   - platform: template
+#     name: Servo Up Down Control
+#     min_value: -100
+#     max_value: 100
+#     step: 1
+#     set_action:
+#       then:
+#         - servo.write:
+#             id: camera_UD
+#             level: !lambda 'return x / 100.0;'
+servo:
+  - id: camera_LR
+    output: LR_output
+    auto_detach_time: 3s
+    transition_length: 1s
+  - id: camera_UD
+    output: UD_output
+    auto_detach_time: 3s
+    transition_length: 1s
+output:
+  - platform: ledc
+    channel: 2
+    id: LR_output
+    pin: GPIO14
+    frequency: 50 Hz
+  - platform: ledc
+    channel: 3
+    id: UD_output
+    pin: GPIO15
+    frequency: 50 Hz
+    
+# Example configuration entry
+esp32_camera_web_server:
+  - port: 8080
+    mode: stream
+  - port: 8081
+    mode: snapshot
