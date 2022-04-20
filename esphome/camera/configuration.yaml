@@ -1,0 +1,14 @@
+#将该段添加到你的configuration.yaml文件的末尾，注意缩进
+input_number:
+  servo_control_left_right:
+    initial: 0
+    min: -100
+    max: 100
+    step: 1
+    mode: slider
+  servo_control_up_down:
+    initial: 50
+    min: 30
+    max: 100
+    step: 1
+    mode: slider

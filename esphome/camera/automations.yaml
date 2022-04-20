@@ -1,0 +1,20 @@
+#将该段添加到你的configuration.yaml文件的末尾，注意缩进
+- id: "camera_servo_control_left_right"
+  alias: 摄像头云台左右控制
+  trigger:
+    - platform: state
+      entity_id: input_number.servo_control_left_right
+  action:
+    # attention to the service name, check it in developer tools
+    - service: esphome.camera_control_servo_left_right
+      data_template:
+        level: "{{ trigger.to_state.state | float }}"
+- id: "camera_servo_control_up_down"
+  alias: 摄像头云台上下控制
+  trigger:
+    - platform: state
+      entity_id: input_number.servo_control_up_down
+  action:
+    - service: esphome.camera_control_servo_up_down
+      data_template:
+        level: "{{ 100.0 - trigger.to_state.state | float }}"
