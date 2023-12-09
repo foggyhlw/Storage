@@ -1,0 +1,118 @@
+globals:
+  - id: color_temperature_var  
+    type: float
+    restore_value: yes
+    initial_value: '4500'
+
+esphome:
+  name: warm-cold-light-foggyhlw
+  friendly_name: warm-cold-light-foggyhlw
+
+esp8266:
+  board: d1_mini
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "use_your_ota_password"
+
+wifi:
+  ssid: 'your_wifi_ssid'
+  password: 'your_wifi_password'
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Warm-Cold-Light Fallback Hotspot"
+
+captive_portal:
+
+output:
+  - platform: esp8266_pwm
+    id: warm_white_pwm
+    pin: GPIO04
+  - platform: esp8266_pwm
+    id: cold_white_pwm
+    pin: GPIO02
+
+light:
+  - platform: cwww
+    name: "Cold Warm Light"
+    id: cold_warm_light
+    cold_white: cold_white_pwm
+    warm_white: warm_white_pwm
+    cold_white_color_temperature: 6000 K
+    warm_white_color_temperature: 3000 K
+    default_transition_length: 0.5s
+    constant_brightness: true      # if enabled when changing light temp, it will blink
+
+sensor:
+  - platform: rotary_encoder
+    name: "Rotary Encoder"
+    pin_a: 
+      number: GPIO12
+      mode:
+        input: true
+        pullup: true
+    pin_b: 
+      number: GPIO14
+      mode:
+        input: true
+        pullup: true
+    on_clockwise:
+      if:
+        condition:
+          binary_sensor.is_off: ec11_button
+        then:
+          - light.dim_relative:
+              id: cold_warm_light
+              relative_brightness: 10%
+        else:
+          - light.control:
+              id: cold_warm_light
+              transition_length: 0.2s
+              color_temperature:  !lambda |-
+                if(id(color_temperature_var) >= 6000){
+                  id(color_temperature_var) = 6000;
+                } else{
+                  id(color_temperature_var) += 300;
+                }
+                return 1000000/id(color_temperature_var);
+    on_anticlockwise:
+      if:
+        condition:
+          binary_sensor.is_off: ec11_button
+        then:
+          - light.dim_relative:
+              id: cold_warm_light
+              relative_brightness: -10%
+        else:
+          - light.control:
+              id: cold_warm_light
+              transition_length: 0.2s
+              color_temperature:  !lambda |-
+                if(id(color_temperature_var) <= 3000){
+                  id(color_temperature_var) = 3000;
+                } else{
+                  id(color_temperature_var) -= 300;
+                }
+                return 1000000/id(color_temperature_var);
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO13
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: "EC11 BUTTON"
+    id: ec11_button
+    on_click:
+      min_length: 50ms
+      max_length: 350ms
+      then:
+        - light.toggle: cold_warm_light
